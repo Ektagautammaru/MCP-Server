@@ -1,92 +1,73 @@
 package com.ms.cme.mcpserver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.json.jackson.JacksonMcpJsonMapper;
 import io.modelcontextprotocol.server.McpServer;
 import io.modelcontextprotocol.server.McpServerFeatures;
 import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.server.transport.StdioServerTransportProvider;
 import io.modelcontextprotocol.spec.McpSchema;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 public class MCPServer {
 
-
-
-    public static void main(String[] args) {
-
-//        System.out.println("In main");
+    public static void main(String[] args)  {
 
         // ---------------- Transport ----------------
         var jsonMapper = new JacksonMcpJsonMapper(new ObjectMapper());
         var transportProvider = new StdioServerTransportProvider(jsonMapper);
-
-//        System.out.println("Transport ");
 
         // ---------------- Server ----------------
         McpSyncServer syncServer = McpServer.sync(transportProvider)
                 .serverInfo("my-server", "1.0.0")
                 .capabilities(
                         McpSchema.ServerCapabilities.builder()
-                                .resources(false, true)
                                 .tools(true)
-                                .prompts(true)
                                 .logging()
-                                .completions()
                                 .build()
                 )
                 .build();
-//        System.out.println("after server");
 
-        // ---------------- Tool Schema ----------------
-        Map<String, Object> properties = Map.of(
+        // ---------------- Input Schema ----------------
+        Map<String, Object> inputProperties = Map.of(
                 "operation", Map.of("type", "string"),
                 "a", Map.of("type", "number"),
                 "b", Map.of("type", "number")
         );
 
-//        System.out.println("Tool schema");
-
-        McpSchema.JsonSchema inputSchema = new McpSchema.JsonSchema(
-                "object",                           // type
-                properties,                         // properties
-                List.of("operation", "a", "b"),     // required
-                false,                              // additionalProperties
-                Map.of(),                           // definitions
-                Map.of()                            // extra
+        McpSchema.JsonSchema EMPTY_JSON_SCHEMA = new McpSchema.JsonSchema("object",
+                inputProperties,
+                null,
+                null,
+                null,
+                null
         );
 
-        // ---------------- Tool ----------------
-        McpSchema.Tool calculatorTool = new McpSchema.Tool(
-                "calculator",               // name
-                "Calculator Tool",          // title
-                "Basic calculator",         // description
-                inputSchema,                // input schema
-                Map.of(),                   // metadata
-                null,                       // annotations
-                Map.of()                    // extra
-        );
+
+        McpSchema.Tool newTool = McpSchema.Tool.builder()
+                .name("new-tool")
+                .title("New test tool")
+                .inputSchema(EMPTY_JSON_SCHEMA)
+                .build();
 
         // ---------------- Tool Implementation ----------------
         McpServerFeatures.SyncToolSpecification calculatorSpec =
                 new McpServerFeatures.SyncToolSpecification(
-                        calculatorTool,
-                        (exchange, arguments) ->
-                                new McpSchema.CallToolResult(
-                                        "Calculator tool executed successfully",
-                                        false
-                                )
+                        newTool,
+                        (exchange, arguments) -> {
+
+                            return new McpSchema.CallToolResult(
+                                    String.valueOf(Map.of("result", "Run MCP Tool Successfully")),
+                                    false
+                            );
+                        }
                 );
 
-        // Register tool
+        // ---------------- Register Tool ----------------
         syncServer.addTool(calculatorSpec);
 
-        // Close server (for demo only)
-        syncServer.close();
     }
 }
