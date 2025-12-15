@@ -59,10 +59,52 @@ public class MCPServer {
                         newTool,
                         (exchange, arguments) -> {
 
-                            return new McpSchema.CallToolResult(
-                                    String.valueOf(Map.of("result", "Run MCP Tool Successfully")),
-                                    false
+                            // 1. Read inputs
+                            String operation = (String) arguments.get("operation");
+                            double a = ((Number) arguments.get("a")).doubleValue();
+                            double b = ((Number) arguments.get("b")).doubleValue();
+
+                            double result;
+
+                            // 2. Perform operation
+                            switch (operation.toLowerCase()) {
+                                case "add":
+                                    result = a + b;
+                                    break;
+                                case "subtract":
+                                    result = a - b;
+                                    break;
+                                case "multiply":
+                                    result = a * b;
+                                    break;
+                                case "divide":
+                                    if (b == 0) {
+                                        return new McpSchema.CallToolResult(
+                                                "{\"error\":\"Division by zero is not allowed\"}",
+                                                true
+                                        );
+                                    }
+                                    result = a / b;
+                                    break;
+                                default:
+                                    return new McpSchema.CallToolResult(
+                                            "{\"error\":\"Invalid operation\"}",
+                                            true
+                                    );
+                            }
+
+                            // 3. Return result as JSON string
+                            String response = String.valueOf(
+                                    Map.of(
+                                            "operation", operation,
+                                            "a", a,
+                                            "b", b,
+                                            "result", result
+                                    )
                             );
+
+                            return new McpSchema.CallToolResult(response, false);
+
                         }
                 );
 
